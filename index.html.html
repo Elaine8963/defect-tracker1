@@ -1,0 +1,1368 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>廠退追蹤系統</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAzNiAzNiI+PHJlY3Qgd2lkdGg9IjM2IiBoZWlnaHQ9IjM2IiByeD0iOCIgZmlsbD0iI0Q5NEYyQiIvPjxyZWN0IHg9IjciIHk9IjE3IiB3aWR0aD0iMjIiIGhlaWdodD0iMTQiIHJ4PSIxLjUiIGZpbGw9IndoaXRlIiBvcGFjaXR5PSIwLjk1Ii8+PHBvbHlnb24gcG9pbnRzPSI3LDE3IDE4LDExIDE4LDE3IiBmaWxsPSJ3aGl0ZSIgb3BhY2l0eT0iMC43Ii8+PHBvbHlnb24gcG9pbnRzPSIxOCwxMSAyOSwxNyAxOCwxNyIgZmlsbD0id2hpdGUiIG9wYWNpdHk9IjAuODUiLz48Y2lyY2xlIGN4PSIyNyIgY3k9IjEwIiByPSI1IiBmaWxsPSIjRkY2QjNEIi8+PHBhdGggZD0iTTI0LjUgMTAgTDI3IDcuNSBMMjcgOSBMMjkuNSA5IEwyOS41IDEwLjUgTDI3IDEwLjUgTDI3IDEyIFoiIGZpbGw9IndoaXRlIi8+PC9zdmc+">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+:root{
+  --bg:#f4f3ef;--surface:#fff;--surface2:#f0efe9;--surface3:#e8e6de;
+  --border:#e0ddd4;--border2:#c8c4b4;
+  --text:#1a1917;--text2:#6b6860;--text3:#9a9890;
+  --blue:#1a56c4;--blue-bg:#e8f0fe;
+  --coral:#c0392b;--coral-bg:#fdecea;
+  --teal:#0f766e;--teal-bg:#e6f7f1;
+  --amber:#92400e;--amber-bg:#fef3c7;
+  --red:#991b1b;--red-bg:#fee2e2;
+  --green:#065f46;--green-bg:#d1fae5;
+  --purple:#5b21b6;--purple-bg:#ede9fe;
+  --r:8px;--r-lg:14px;--r-xl:18px;
+  --shadow:0 1px 4px rgba(0,0,0,.07),0 4px 16px rgba(0,0,0,.05);
+  --shadow-lg:0 4px 24px rgba(0,0,0,.10);
+  --sidebar-w:220px;
+  --header-h:60px;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'Helvetica Neue','PingFang TC','Microsoft JhengHei',sans-serif;background:var(--bg);color:var(--text);font-size:13px;min-height:100vh;}
+
+/* ── Header ── */
+.header{background:var(--surface);border-bottom:1px solid var(--border);padding:0 28px;display:flex;align-items:center;justify-content:space-between;height:var(--header-h);position:fixed;top:0;left:0;right:0;z-index:50;box-shadow:0 1px 0 var(--border);}
+.header-left{display:flex;align-items:center;gap:12px;}
+.app-name{font-size:17px;font-weight:700;letter-spacing:-0.5px;cursor:pointer;}
+.app-name:hover{color:var(--coral);}
+.gs-badge{font-size:10px;background:var(--teal-bg);color:var(--teal);padding:3px 8px;border-radius:20px;font-weight:500;}
+.header-right{display:flex;align-items:center;gap:8px;}
+.sync-pill{display:flex;align-items:center;gap:5px;font-size:11px;padding:5px 12px;border-radius:20px;font-weight:500;}
+.sync-ok{background:var(--green-bg);color:var(--green);}
+.sync-err{background:var(--red-bg);color:var(--red);}
+.sync-loading{background:var(--amber-bg);color:var(--amber);}
+
+/* ── Buttons ── */
+.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border-radius:var(--r);border:1px solid var(--border2);background:var(--surface);color:var(--text);font-size:12px;font-weight:500;cursor:pointer;transition:all .15s;white-space:nowrap;}
+.btn:hover{background:var(--surface2);}
+.btn:disabled{opacity:.45;cursor:not-allowed;}
+.btn-dark{background:#1a1917;border-color:#1a1917;color:#fff;}
+.btn-dark:hover{background:#333;border-color:#333;}
+.btn-sm{padding:5px 11px;font-size:11px;}
+
+/* ── Main layout ── */
+.main{margin-top:var(--header-h);display:flex;min-height:calc(100vh - var(--header-h));}
+
+/* ── Dashboard view ── */
+#dashboard-view{flex:1;display:flex;align-items:center;justify-content:center;padding:32px 24px;}
+.dash-cards{display:grid;grid-template-columns:repeat(7,1fr);gap:12px;width:100%;max-width:1200px;}
+.stat-card{background:var(--surface);border-radius:var(--r-lg);border:1px solid var(--border);padding:20px 18px;box-shadow:var(--shadow);display:flex;flex-direction:column;gap:6px;position:relative;overflow:hidden;transition:transform .18s,box-shadow .18s;cursor:pointer;}
+.stat-card:hover{transform:translateY(-3px);box-shadow:var(--shadow-lg);}
+.stat-card.active{outline:2.5px solid #1a1917;outline-offset:2px;}
+.stat-card-icon{font-size:22px;margin-bottom:2px;}
+.stat-card-val{font-size:38px;font-weight:800;line-height:1;letter-spacing:-1.5px;}
+.stat-card-label{font-size:13px;font-weight:600;color:var(--text);}
+.stat-card-sub{font-size:11px;color:var(--text3);}
+.stat-card::after{content:'';position:absolute;right:-12px;bottom:-12px;width:70px;height:70px;border-radius:50%;opacity:.08;}
+.card-total .stat-card-val{color:var(--text);}
+.card-total::after{background:#1a1917;}
+.card-pending .stat-card-val{color:#d97706;}
+.card-pending{border-left:4px solid #f59e0b;}
+.card-overdue .stat-card-val{color:var(--coral);}
+.card-overdue{border-left:4px solid var(--coral);}
+.card-trans .stat-card-val{color:var(--blue);}
+.card-trans{border-left:4px solid var(--blue);}
+.card-ret .stat-card-val{color:var(--coral);}
+.card-ret{border-left:4px solid #ef4444;}
+.card-swap .stat-card-val{color:var(--teal);}
+.card-swap{border-left:4px solid var(--teal);}
+.card-matched .stat-card-val{color:var(--green);}
+.card-matched{border-left:4px solid #10b981;}
+
+/* ── Table view layout ── */
+#table-view{flex:1;display:none;flex-direction:row;}
+
+/* ── Sidebar ── */
+#sidebar{width:var(--sidebar-w);flex-shrink:0;background:var(--surface);border-right:1px solid var(--border);padding:12px 0;display:none;flex-direction:column;gap:2px;overflow-y:auto;transition:width .2s ease;}
+#sidebar.collapsed{width:52px;}
+#sidebar.collapsed .sidebar-info,#sidebar.collapsed .sidebar-val,#sidebar.collapsed .sidebar-sub{display:none;}
+#sidebar.collapsed .sidebar-item{justify-content:center;padding:10px 0;}
+#sidebar.collapsed .sidebar-back-text{display:none;}
+#sidebar.collapsed .sidebar-back{justify-content:center;padding:10px 0;}
+#sidebar.collapsed .sidebar-toggle-icon{transform:rotate(180deg);}
+.sidebar-toggle{display:flex;align-items:center;justify-content:space-between;padding:6px 14px 10px;border-bottom:1px solid var(--border);margin-bottom:4px;cursor:pointer;color:var(--text2);font-size:11px;font-weight:600;}
+.sidebar-toggle:hover{color:var(--text);}
+.sidebar-toggle-icon{transition:transform .2s ease;font-size:14px;}
+#sidebar.collapsed .sidebar-toggle{justify-content:center;padding:6px 0 10px;}
+#sidebar.collapsed .sidebar-toggle-label{display:none;}
+.sidebar-item{display:flex;align-items:center;gap:10px;padding:10px 14px;margin:0 8px;border-radius:var(--r);cursor:pointer;transition:background .12s;}
+.sidebar-item:hover{background:var(--surface2);}
+.sidebar-item.active{background:#1a1917;color:#fff;}
+.sidebar-item.active .sidebar-sub{color:rgba(255,255,255,.6);}
+.sidebar-item.active .sidebar-val{color:#fff;}
+.sidebar-icon{font-size:18px;flex-shrink:0;width:24px;text-align:center;}
+.sidebar-info{flex:1;min-width:0;}
+.sidebar-label{font-size:12px;font-weight:600;}
+.sidebar-sub{font-size:10px;color:var(--text3);margin-top:1px;}
+.sidebar-val{font-size:18px;font-weight:800;letter-spacing:-0.5px;color:var(--text);flex-shrink:0;}
+.sidebar-divider{height:1px;background:var(--border);margin:6px 14px;}
+.sidebar-back{display:flex;align-items:center;gap:8px;padding:10px 14px;margin:0 8px 4px;border-radius:var(--r);cursor:pointer;font-size:12px;font-weight:600;color:var(--text2);border:1px solid var(--border);transition:background .12s;}
+.sidebar-back:hover{background:var(--surface2);color:var(--text);}
+
+/* ── Table area ── */
+.table-area{flex:1;display:flex;flex-direction:column;min-width:0;overflow:hidden;}
+.toolbar{background:var(--surface);border-bottom:1px solid var(--border);padding:10px 16px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;flex-shrink:0;}
+.search-wrap{position:relative;flex:1;min-width:160px;max-width:280px;}
+.search-wrap input{width:100%;padding:7px 12px 7px 34px;border:1px solid var(--border);border-radius:var(--r);background:var(--surface2);color:var(--text);font-size:12px;outline:none;transition:border .15s;}
+.search-wrap input:focus{border-color:var(--border2);background:var(--surface);}
+.search-icon{position:absolute;left:11px;top:50%;transform:translateY(-50%);color:var(--text3);font-size:14px;}
+.toolbar select{padding:7px 10px;border:1px solid var(--border);border-radius:var(--r);background:var(--surface2);color:var(--text);font-size:12px;cursor:pointer;outline:none;}
+.toolbar-divider{width:1px;height:24px;background:var(--border);margin:0 2px;}
+.row-count{margin-left:auto;font-size:11px;color:var(--text3);white-space:nowrap;font-weight:500;}
+.table-wrap{flex:1;background:var(--surface);margin:12px;border-radius:var(--r-lg);border:1px solid var(--border);box-shadow:var(--shadow);overflow:hidden;}
+.table-scroll{overflow-x:auto;overflow-y:auto;max-height:calc(100vh - var(--header-h) - 100px);border-radius:var(--r-lg);}
+table{width:100%;border-collapse:collapse;}
+thead tr{background:var(--surface2);position:sticky;top:0;z-index:10;}
+th{padding:11px 12px;text-align:left;font-size:11px;font-weight:700;color:var(--text2);white-space:nowrap;letter-spacing:.4px;text-transform:uppercase;background:var(--surface2);box-shadow:0 1px 0 var(--border);}
+td{padding:9px 12px;border-bottom:1px solid var(--border);vertical-align:middle;font-size:12px;}
+tr:last-child td{border-bottom:none;}
+tbody tr{transition:background .1s;}
+tbody tr:hover td{background:#fafaf6;}
+tbody tr.overdue-warn td{background:#fffbeb;}
+tbody tr.overdue-warn:hover td{background:#fef3c7;}
+tbody tr.overdue-crit td{background:#fff5f5;}
+tbody tr.overdue-crit:hover td{background:#fee8e8;}
+tbody tr:hover td:last-child{background:#fafaf6;}
+tbody tr.overdue-warn td:last-child{background:#fffbeb;}
+tbody tr.overdue-warn:hover td:last-child{background:#fef3c7;}
+tbody tr.overdue-crit td:last-child{background:#fff5f5;}
+tbody tr.overdue-crit:hover td:last-child{background:#fee8e8;}
+.row-num{color:var(--text3);font-size:11px;font-weight:600;}
+.mono{font-family:'SF Mono','Fira Code',monospace;font-size:11px;}
+
+/* ── Badges ── */
+.badge{display:inline-flex;align-items:center;gap:3px;padding:3px 8px;border-radius:20px;font-size:11px;font-weight:600;white-space:nowrap;}
+.badge-blue{background:var(--blue-bg);color:var(--blue);}
+.badge-coral{background:var(--coral-bg);color:var(--coral);}
+.badge-teal{background:var(--teal-bg);color:var(--teal);}
+.badge-gray{background:var(--surface2);color:var(--text2);border:1px solid var(--border);}
+.badge-empty{background:#f1f0ea;color:var(--text3);border:1px dashed var(--border2);}
+.overdue-warn-pill{display:inline-flex;align-items:center;gap:3px;background:#fef3c7;color:#92400e;padding:2px 7px;border-radius:20px;font-size:10px;font-weight:700;margin-left:5px;}
+.overdue-crit-pill{display:inline-flex;align-items:center;gap:3px;background:var(--red-bg);color:var(--red);padding:2px 7px;border-radius:20px;font-size:10px;font-weight:700;margin-left:5px;}
+.match-pill{background:var(--green-bg);color:var(--green);padding:1px 6px;border-radius:20px;font-size:10px;font-weight:600;margin-left:4px;}
+.return-date-soon{display:inline-flex;align-items:center;gap:3px;background:#ede9fe;color:#5b21b6;padding:2px 7px;border-radius:20px;font-size:10px;font-weight:700;margin-left:5px;}
+.return-date-today{display:inline-flex;align-items:center;gap:3px;background:var(--amber-bg);color:var(--amber);padding:2px 7px;border-radius:20px;font-size:10px;font-weight:700;margin-left:5px;}
+.return-date-over{display:inline-flex;align-items:center;gap:3px;background:var(--red-bg);color:var(--red);padding:2px 7px;border-radius:20px;font-size:10px;font-weight:700;margin-left:5px;}
+.cell-clip{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+
+/* ── Empty state ── */
+.empty-state{text-align:center;padding:72px 24px;color:var(--text3);}
+.empty-icon{font-size:52px;margin-bottom:16px;}
+.empty-state h3{font-size:16px;color:var(--text2);margin-bottom:8px;font-weight:700;}
+.empty-state p{font-size:12px;line-height:1.7;}
+
+/* ── Modals ── */
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:200;align-items:center;justify-content:center;backdrop-filter:blur(2px);}
+.modal-overlay.open{display:flex;}
+.modal{background:var(--surface);border-radius:var(--r-xl);border:1px solid var(--border);width:560px;max-width:95vw;max-height:90vh;overflow-y:auto;box-shadow:var(--shadow-lg);}
+.modal-header{padding:22px 26px 0;display:flex;align-items:center;justify-content:space-between;}
+.modal-title{font-size:16px;font-weight:700;display:flex;align-items:center;gap:8px;}
+.modal-title-icon{width:30px;height:30px;background:var(--surface2);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:15px;}
+.modal-close{background:none;border:none;font-size:18px;cursor:pointer;color:var(--text3);padding:6px;border-radius:var(--r);width:32px;height:32px;display:flex;align-items:center;justify-content:center;}
+.modal-close:hover{background:var(--surface2);color:var(--text);}
+.modal-body{padding:18px 26px;}
+.modal-footer{padding:16px 26px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:8px;}
+.item-card{background:var(--surface2);border-radius:var(--r);padding:14px 16px;margin-bottom:18px;border:1px solid var(--border);}
+.item-card-name{font-weight:700;font-size:14px;margin-bottom:6px;line-height:1.4;}
+.item-card-meta{font-size:11px;color:var(--text2);display:flex;gap:14px;flex-wrap:wrap;}
+.supplier-row{margin-top:10px;padding-top:10px;border-top:1px solid var(--border);display:flex;align-items:center;gap:6px;}
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+.form-row{display:flex;flex-direction:column;gap:5px;}
+.form-row.full{grid-column:1/-1;}
+.form-row label{font-size:11px;font-weight:600;color:var(--text2);letter-spacing:.3px;}
+.form-row input,.form-row select,.form-row textarea{padding:9px 11px;border:1px solid var(--border);border-radius:var(--r);background:var(--surface);color:var(--text);font-size:12px;outline:none;font-family:inherit;transition:border .15s;}
+.form-row input:focus,.form-row select:focus,.form-row textarea:focus{border-color:#1a1917;box-shadow:0 0 0 2px rgba(26,25,23,.06);}
+.form-row textarea{resize:vertical;min-height:76px;}
+.preload-notice{background:var(--teal-bg);border:1px solid #6ee7b7;color:var(--teal);border-radius:var(--r);padding:9px 13px;font-size:11px;margin-bottom:16px;display:flex;align-items:center;gap:7px;font-weight:500;}
+.notif-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:300;align-items:center;justify-content:center;backdrop-filter:blur(2px);}
+.notif-overlay.open{display:flex;}
+.notif-box{background:var(--surface);border-radius:var(--r-xl);border:1px solid var(--border);width:520px;max-width:95vw;max-height:80vh;overflow-y:auto;box-shadow:var(--shadow-lg);}
+.notif-header{padding:22px 24px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;}
+.notif-title{font-size:15px;font-weight:700;display:flex;align-items:center;gap:8px;}
+.notif-body{padding:16px 24px;}
+.notif-item{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:var(--r);margin-bottom:8px;border:1px solid var(--border);}
+.notif-item.warn{background:#fffbeb;border-color:#fde68a;}
+.notif-item.crit{background:#fff5f5;border-color:#fecaca;}
+.notif-item-info{flex:1;min-width:0;}
+.notif-item-name{font-size:12px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.notif-item-meta{font-size:11px;color:var(--text2);margin-top:2px;}
+.notif-footer{padding:14px 24px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;}
+.batch-bar{display:none;position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#1a1917;color:#fff;border-radius:var(--r-lg);padding:12px 20px;align-items:center;gap:12px;box-shadow:var(--shadow-lg);z-index:100;white-space:nowrap;}
+.batch-bar.show{display:flex;}
+.batch-count{font-size:13px;font-weight:600;}
+.batch-divider{width:1px;height:20px;background:rgba(255,255,255,.25);}
+.batch-btn{padding:6px 14px;border-radius:var(--r);border:1px solid rgba(255,255,255,.3);background:transparent;color:#fff;font-size:12px;font-weight:500;cursor:pointer;transition:background .15s;}
+.batch-btn:hover{background:rgba(255,255,255,.15);}
+.batch-btn-cancel{color:rgba(255,255,255,.6);}
+.batch-modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:250;align-items:center;justify-content:center;backdrop-filter:blur(2px);}
+.batch-modal-overlay.open{display:flex;}
+.batch-modal{background:var(--surface);border-radius:var(--r-xl);border:1px solid var(--border);width:440px;max-width:95vw;box-shadow:var(--shadow-lg);}
+.batch-modal-header{padding:20px 24px 0;display:flex;align-items:center;justify-content:space-between;}
+.batch-modal-header h2{font-size:15px;font-weight:700;}
+.batch-modal-body{padding:18px 24px;}
+.batch-modal-footer{padding:14px 24px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:8px;}
+input[type=checkbox]{width:15px;height:15px;cursor:pointer;accent-color:#1a1917;}
+.th-check{width:36px;text-align:center;}
+.td-check{text-align:center;}
+.loading-overlay{display:none;position:fixed;inset:0;background:rgba(255,255,255,.88);z-index:400;align-items:center;justify-content:center;flex-direction:column;gap:14px;}
+.loading-overlay.show{display:flex;}
+.spinner{width:38px;height:38px;border:3px solid var(--border);border-top-color:#1a1917;border-radius:50%;animation:spin .75s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg);}}
+.loading-text{font-size:13px;color:var(--text2);font-weight:500;}
+.toast{position:fixed;bottom:28px;left:50%;transform:translateX(-50%);background:#1a1917;color:#fff;padding:11px 22px;border-radius:var(--r);font-size:12px;font-weight:500;z-index:500;opacity:0;transition:opacity .25s;pointer-events:none;white-space:nowrap;box-shadow:var(--shadow-lg);}
+.toast.show{opacity:1;}
+
+/* ── 登入頁面 ── */
+#login-screen{position:fixed;inset:0;background:linear-gradient(135deg,#1a1917 0%,#2d2b28 50%,#1a1917 100%);z-index:1000;display:flex;align-items:center;justify-content:center;}
+#login-screen.hidden{display:none;}
+.login-box{background:var(--surface);border-radius:20px;padding:40px 44px;width:400px;max-width:92vw;box-shadow:0 24px 64px rgba(0,0,0,.35);}
+.login-logo{display:flex;align-items:center;gap:12px;margin-bottom:28px;}
+.login-title{font-size:20px;font-weight:700;letter-spacing:-0.5px;}
+.login-subtitle{font-size:12px;color:var(--text3);margin-top:2px;}
+.login-form{display:flex;flex-direction:column;gap:14px;}
+.login-field{display:flex;flex-direction:column;gap:6px;}
+.login-field label{font-size:11px;font-weight:600;color:var(--text2);letter-spacing:.4px;}
+.login-field input{padding:11px 14px;border:1.5px solid var(--border);border-radius:var(--r);font-size:14px;outline:none;transition:border .15s;background:var(--surface2);}
+.login-field input:focus{border-color:#1a1917;background:var(--surface);}
+.login-btn{margin-top:6px;padding:13px;border-radius:var(--r);border:none;background:#D94F2B;color:#fff;font-size:14px;font-weight:700;cursor:pointer;transition:background .15s;letter-spacing:.3px;}
+.login-btn:hover{background:#c0392b;}
+.login-error{color:#c0392b;font-size:12px;text-align:center;min-height:18px;font-weight:500;}
+.login-user-badge{display:flex;align-items:center;gap:6px;font-size:12px;font-weight:600;}
+.login-user-dot{width:8px;height:8px;border-radius:50%;background:#10b981;}
+.login-user-dot.admin{background:#f59e0b;}
+.logout-btn{font-size:11px;padding:4px 10px;border-radius:20px;border:1px solid var(--border);background:transparent;cursor:pointer;color:var(--text2);}
+.logout-btn:hover{background:var(--surface2);}
+
+/* ── Admin 彙總視圖 ── */
+.admin-banner{background:linear-gradient(90deg,#92400e,#d97706);color:#fff;padding:10px 28px;font-size:12px;font-weight:600;display:flex;align-items:center;gap:8px;}
+</style>
+</head>
+<body>
+
+<!-- ── 登入畫面 ── -->
+<div id="login-screen">
+  <div class="login-box">
+    <div class="login-logo">
+      <svg width="36" height="36" viewBox="0 0 36 36" fill="none"><rect width="36" height="36" rx="8" fill="#D94F2B"/><rect x="7" y="17" width="22" height="14" rx="1.5" fill="white" opacity="0.95"/><polygon points="7,17 18,11 18,17" fill="white" opacity="0.7"/><polygon points="18,11 29,17 18,17" fill="white" opacity="0.85"/><line x1="18" y1="17" x2="18" y2="31" stroke="#D94F2B" stroke-width="1.5" opacity="0.35"/><circle cx="27" cy="10" r="5" fill="#FF6B3D"/><path d="M24.5 10 L27 7.5 L27 9 L29.5 9 L29.5 10.5 L27 10.5 L27 12 Z" fill="white"/></svg>
+      <div>
+        <div class="login-title">廠退追蹤系統</div>
+        <div class="login-subtitle">請輸入帳號與密碼登入</div>
+      </div>
+    </div>
+    <div class="login-form">
+      <div class="login-field">
+        <label>帳號</label>
+        <input type="text" id="login-user" placeholder="請輸入帳號" autocomplete="username" onkeydown="if(event.key==='Enter')document.getElementById('login-pass').focus()">
+      </div>
+      <div class="login-field">
+        <label>密碼</label>
+        <input type="password" id="login-pass" placeholder="請輸入密碼" autocomplete="current-password" onkeydown="if(event.key==='Enter')doLogin()">
+      </div>
+      <div class="login-error" id="login-error"></div>
+      <button class="login-btn" onclick="doLogin()">登入</button>
+    </div>
+  </div>
+</div>
+
+<div class="loading-overlay" id="loading-overlay">
+  <div class="spinner"></div>
+  <div class="loading-text" id="loading-text">連接 Google Sheets 中...</div>
+</div>
+<div class="toast" id="toast"></div>
+
+<!-- 逾期通知 -->
+<div class="notif-overlay" id="notif-overlay">
+  <div class="notif-box">
+    <div class="notif-header">
+      <div class="notif-title" id="notif-title">🚚 廠商收退提醒</div>
+      <button class="modal-close" onclick="closeNotif()">✕</button>
+    </div>
+    <div class="notif-body" id="notif-body"></div>
+    <div class="notif-footer"><button class="btn btn-dark" id="notif-close-btn" onclick="closeNotif()">知道了</button></div>
+  </div>
+</div>
+
+<!-- 批次編輯 Modal -->
+<div class="batch-modal-overlay" id="batch-modal-overlay">
+  <div class="batch-modal">
+    <div class="batch-modal-header">
+      <h2>✏️ 批次修改 <span id="batch-modal-count"></span> 筆</h2>
+      <button class="modal-close" onclick="closeBatchModal()">✕</button>
+    </div>
+    <div class="batch-modal-body">
+      <p style="font-size:12px;color:var(--text2);margin-bottom:16px">只填寫要修改的欄位，空白欄位將保留原值不更動。</p>
+      <div class="form-grid">
+        <div class="form-row"><label>🔖 商流回覆</label>
+          <select id="b-reply"><option value="">— 保留原值 —</option><option>轉不良</option><option>不良退</option><option>不良換</option></select></div>
+        <div class="form-row"><label>📅 反映日期</label><input type="date" id="b-date"></div>
+        <div class="form-row"><label>🚚 廠商收退日</label><input type="date" id="b-returnDate"></div>
+        <div class="form-row full"><label>⚠️ 不良原因</label><input type="text" id="b-reason" placeholder="空白 = 保留原值"></div>
+        <div class="form-row full"><label>📝 進度備註</label><textarea id="b-note" placeholder="空白 = 保留原值" style="min-height:60px"></textarea></div>
+        <div class="form-row"><label>👤 處理人員</label><input type="text" id="b-handler" placeholder="空白 = 保留原值"></div>
+      </div>
+    </div>
+    <div class="batch-modal-footer">
+      <button class="btn" onclick="closeBatchModal()">取消</button>
+      <button class="btn btn-dark" onclick="applyBatch()">💾 套用並同步</button>
+    </div>
+  </div>
+</div>
+
+<!-- 批次浮動列 -->
+<div class="batch-bar" id="batch-bar">
+  <span class="batch-count" id="batch-count-label">已選 0 筆</span>
+  <div class="batch-divider"></div>
+  <button class="batch-btn" onclick="openBatchModal()">✏️ 批次編輯</button>
+  <button class="batch-btn batch-btn-cancel" onclick="clearSelection()">✕ 取消選取</button>
+</div>
+
+<!-- 編輯 Modal -->
+<div class="modal-overlay" id="edit-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title"><div class="modal-title-icon">✏️</div>編輯追蹤資料</div>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div id="preload-notice" class="preload-notice" style="display:none">✓ 此筆資料已從歷史追蹤檔預載，可直接修改</div>
+      <div class="item-card">
+        <div class="item-card-name" id="m-name"></div>
+        <div class="item-card-meta" id="m-meta"></div>
+        <div class="supplier-row" id="m-supplier-box" style="display:none">
+          <span style="font-size:11px;color:var(--text3)">🏢 自動帶入：</span>
+          <span id="m-supplier-name" style="font-size:12px;font-weight:700;color:var(--teal)"></span>
+          <span id="m-match-info" style="font-size:10px;color:var(--text3)"></span>
+        </div>
+        <div class="form-row full" style="margin-top:10px">
+          <label>🏢 供應商名稱（自動帶入若有誤可手動修改）</label>
+          <input type="text" id="m-supplierName" placeholder="輸入供應商名稱">
+        </div>
+      </div>
+      <div class="form-grid">
+        <div class="form-row"><label>🔖 商流回覆</label>
+          <select id="m-reply"><option value="">-- 未填寫 --</option><option>轉不良</option><option>不良退</option><option>不良換</option></select></div>
+        <div class="form-row"><label>📅 反映日期</label><input type="date" id="m-date"></div>
+        <div class="form-row"><label>🚚 廠商收退日</label><input type="date" id="m-returnDate"></div>
+        <div class="form-row full"><label>⚠️ 不良原因</label><input type="text" id="m-reason" placeholder="例：包裝袋破損*3、無中文標"></div>
+        <div class="form-row full"><label>📝 進度備註</label><textarea id="m-note" placeholder="例：待檔期結束後一起開退"></textarea></div>
+        <div class="form-row"><label>👤 處理人員</label><input type="text" id="m-handler" placeholder="姓名或代號"></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal()">取消</button>
+      <button class="btn btn-dark" onclick="saveEdit()" id="btn-save">💾 儲存並同步</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Header ── -->
+<div class="header">
+  <div class="header-left">
+    <div onclick="showDashboard()" style="cursor:pointer"><svg width="36" height="36" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="36" height="36" rx="8" fill="#D94F2B"/>
+  <rect x="7" y="17" width="22" height="14" rx="1.5" fill="white" opacity="0.95"/>
+  <polygon points="7,17 18,11 18,17" fill="white" opacity="0.7"/>
+  <polygon points="18,11 29,17 18,17" fill="white" opacity="0.85"/>
+  <line x1="18" y1="17" x2="18" y2="31" stroke="#D94F2B" stroke-width="1.5" opacity="0.35"/>
+  <rect x="7" y="22" width="22" height="2.5" fill="#D94F2B" opacity="0.15"/>
+  <circle cx="27" cy="10" r="5" fill="#FF6B3D"/>
+  <path d="M24.5 10 L27 7.5 L27 9 L29.5 9 L29.5 10.5 L27 10.5 L27 12 Z" fill="white"/>
+</svg></div>
+    <div class="app-name" onclick="showDashboard()">廠退追蹤系統</div>
+    <span class="gs-badge">☁ Google Sheets</span>
+    <span class="sync-pill sync-loading" id="sync-status">⏳ 連線中...</span>
+    <div class="login-user-badge" id="user-badge" style="display:none">
+      <span class="login-user-dot" id="user-dot"></span>
+      <span id="user-display"></span>
+      <button class="logout-btn" onclick="doLogout()">登出</button>
+    </div>
+  </div>
+  <div class="header-right">
+    <button class="btn" onclick="loadData()" id="btn-refresh">↺ 重新整理</button>
+    <button class="btn btn-dark" onclick="document.getElementById('file-input').click()">⬆ 匯入 Excel</button>
+    <input type="file" id="file-input" accept=".xlsx,.xls" style="display:none" onchange="handleFile(this)">
+    <button class="btn" onclick="exportData()">⬇ 匯出</button>
+  </div>
+</div>
+
+<!-- ── Main ── -->
+<div class="main">
+  <!-- 儀表板 -->
+  <div id="dashboard-view">
+  <div class="dash-cards">
+    <div class="stat-card card-total" onclick="showTable('all')" id="card-all">
+      <div class="stat-card-icon">📋</div>
+      <div class="stat-card-val" id="st-total">—</div>
+      <div class="stat-card-label">總筆數</div>
+      <div class="stat-card-sub">全部不良品項目</div>
+    </div>
+    <div class="stat-card card-pending" onclick="showTable('pending')" id="card-pending">
+      <div class="stat-card-icon">⏳</div>
+      <div class="stat-card-val" id="st-pending">—</div>
+      <div class="stat-card-label">待處理</div>
+      <div class="stat-card-sub">尚未填寫商流回覆</div>
+    </div>
+    <div class="stat-card card-overdue" onclick="showTable('overdue')" id="card-overdue">
+      <div class="stat-card-icon">🚨</div>
+      <div class="stat-card-val" id="st-overdue">—</div>
+      <div class="stat-card-label">逾期警示</div>
+      <div class="stat-card-sub">反映日期超過 7 天</div>
+    </div>
+    <div class="stat-card card-trans" onclick="showTable('trans')" id="card-trans">
+      <div class="stat-card-icon">🔄</div>
+      <div class="stat-card-val" id="st-trans">—</div>
+      <div class="stat-card-label">轉不良</div>
+      <div class="stat-card-sub">商流回覆：轉不良</div>
+    </div>
+    <div class="stat-card card-ret" onclick="showTable('ret')" id="card-ret">
+      <div class="stat-card-icon">↩️</div>
+      <div class="stat-card-val" id="st-ret">—</div>
+      <div class="stat-card-label">不良退</div>
+      <div class="stat-card-sub">商流回覆：不良退</div>
+    </div>
+    <div class="stat-card card-swap" onclick="showTable('swap')" id="card-swap">
+      <div class="stat-card-icon">🔁</div>
+      <div class="stat-card-val" id="st-swap">—</div>
+      <div class="stat-card-label">不良換</div>
+      <div class="stat-card-sub">商流回覆：不良換</div>
+    </div>
+    <div class="stat-card card-matched" onclick="showTable('matched')" id="card-matched">
+      <div class="stat-card-icon">✅</div>
+      <div class="stat-card-val" id="st-matched">—</div>
+      <div class="stat-card-label">已帶入名稱</div>
+      <div class="stat-card-sub">成功對比商品主檔</div>
+    </div>
+  </div>
+</div>
+
+  <!-- 表格視圖 -->
+  <div id="table-view">
+    <!-- Sidebar -->
+    <div id="sidebar" style="display:none">
+  <div class="sidebar-toggle" onclick="toggleSidebar()" title="收合/展開">
+    <span class="sidebar-toggle-label">分類篩選</span>
+    <span class="sidebar-toggle-icon">◀</span>
+  </div>
+  <div class="sidebar-item" id="sidebar-all" onclick="filterByCard('all')">
+    <div class="sidebar-icon">📋</div>
+    <div class="sidebar-info"><div class="sidebar-label">全部</div><div class="sidebar-sub">全部不良品項</div></div>
+    <div class="sidebar-val" id="sb-val-all">—</div>
+  </div>
+  <div class="sidebar-item" id="sidebar-pending" onclick="filterByCard('pending')">
+    <div class="sidebar-icon">⏳</div>
+    <div class="sidebar-info"><div class="sidebar-label">待處理</div><div class="sidebar-sub">未填商流回覆</div></div>
+    <div class="sidebar-val" id="sb-val-pending">—</div>
+  </div>
+  <div class="sidebar-item" id="sidebar-overdue" onclick="filterByCard('overdue')">
+    <div class="sidebar-icon">🚨</div>
+    <div class="sidebar-info"><div class="sidebar-label">逾期警示</div><div class="sidebar-sub">超過 7 天</div></div>
+    <div class="sidebar-val" id="sb-val-overdue">—</div>
+  </div>
+  <div class="sidebar-item" id="sidebar-trans" onclick="filterByCard('trans')">
+    <div class="sidebar-icon">🔄</div>
+    <div class="sidebar-info"><div class="sidebar-label">轉不良</div><div class="sidebar-sub">商流：轉不良</div></div>
+    <div class="sidebar-val" id="sb-val-trans">—</div>
+  </div>
+  <div class="sidebar-item" id="sidebar-ret" onclick="filterByCard('ret')">
+    <div class="sidebar-icon">↩️</div>
+    <div class="sidebar-info"><div class="sidebar-label">不良退</div><div class="sidebar-sub">商流：不良退</div></div>
+    <div class="sidebar-val" id="sb-val-ret">—</div>
+  </div>
+  <div class="sidebar-item" id="sidebar-swap" onclick="filterByCard('swap')">
+    <div class="sidebar-icon">🔁</div>
+    <div class="sidebar-info"><div class="sidebar-label">不良換</div><div class="sidebar-sub">商流：不良換</div></div>
+    <div class="sidebar-val" id="sb-val-swap">—</div>
+  </div>
+  <div class="sidebar-item" id="sidebar-matched" onclick="filterByCard('matched')">
+    <div class="sidebar-icon">✅</div>
+    <div class="sidebar-info"><div class="sidebar-label">帶入名稱</div><div class="sidebar-sub">已對比主檔</div></div>
+    <div class="sidebar-val" id="sb-val-matched">—</div>
+  </div>
+</div>
+
+    <!-- 表格區 -->
+    <div class="table-area">
+      <div class="toolbar">
+        <button class="sidebar-back" onclick="showDashboard()">← 返回儀表板</button>
+        <div class="toolbar-divider"></div>
+        <div class="search-wrap">
+          <span class="search-icon">🔍</span>
+          <input type="text" id="search" placeholder="搜尋供應商、品名、SKU..." oninput="renderTable()">
+        </div>
+        <select id="filter-sup" onchange="renderTable()" style="max-width:150px">
+          <option value="">🏢 全部供應商</option>
+        </select>
+        <select id="filter-reply" onchange="renderTable()">
+          <option value="">🔖 全部商流</option>
+          <option>轉不良</option><option>不良退</option><option>不良換</option>
+          <option value="__empty">未填寫</option>
+        </select>
+        <select id="filter-cat" onchange="renderTable()">
+          <option value="">🏷 全部分類</option>
+          <option>預購</option><option>食品</option><option>居家/美妝</option><option>國際線/其它</option>
+        </select>
+        <select id="filter-overdue" onchange="renderTable()">
+          <option value="">📅 全部狀態</option>
+          <option value="1">🚨 僅逾期</option>
+        </select>
+        <span class="row-count" id="row-count"></span>
+      </div>
+      <div class="table-wrap">
+        <div id="empty-state" class="empty-state">
+          <div class="empty-icon">☁️</div>
+          <h3>正在連接 Google Sheets...</h3>
+          <p>請稍候，系統啟動時會自動讀取雲端資料</p>
+        </div>
+        <div class="table-scroll">
+          <table id="main-table" style="display:none">
+            <thead>
+              <tr>
+                <th class="th-check"><input type="checkbox" id="check-all" onchange="toggleCheckAll(this)"></th>
+                <th style="width:44px">#</th>
+                <th style="width:86px">供應商代號</th>
+                <th style="width:140px">供應商名稱</th>
+                <th style="width:78px">儲位</th>
+                <th style="width:74px">大分類</th>
+                <th style="width:86px">商品代號</th>
+                <th>品名</th>
+                <th style="width:54px;text-align:right">庫存</th>
+                <th style="width:82px">商流回覆</th>
+                <th style="width:112px">不良原因</th>
+                <th style="width:100px">反映日期</th>
+                <th style="width:110px">廠商收退日</th>
+                <th style="width:134px">進度備註</th>
+                <th style="width:70px">處理人員</th>
+                <th style="width:88px">更新日期</th>
+                <th style="width:48px;position:sticky;right:0;background:var(--surface2);z-index:11;box-shadow:-2px 0 4px rgba(0,0,0,.06)"></th>
+              </tr>
+            </thead>
+            <tbody id="tbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const GAS_URL = 'https://script.google.com/macros/s/AKfycbztoWU19z9kH_gXX-KQl47RbLRHTzeIy0a7AifXANpeX-wrQXH6g8NYuwuErFmUmW1B/exec';
+const JSONP_TIMEOUT = 15000;
+
+// ═══════════════════════════════════════════
+// 商品主檔
+// ═══════════════════════════════════════════
+const MASTER = [{"s":"000677","n":"全家便利商店股份有限公司","c":"預購","k":"50065379","p":"25gx1_預-造型擦手巾"},{"s":"000677","n":"全家便利商店股份有限公司","c":"預購","k":"50065400","p":"1個x1_贈-Bobo捏捏球"},{"s":"000677","n":"全家便利商店股份有限公司","c":"預購","k":"50065401","p":"1個x1_贈-Dinataeng捏捏球"},{"s":"000677","n":"全家便利商店股份有限公司","c":"預購","k":"50068074","p":"1個x1_樂淇蘋果帆布袋"},{"s":"000677","n":"全家便利商店股份有限公司","c":"預購","k":"50068224","p":"1個x1_贈-午后時光重乳奶茶造型"},{"s":"000677","n":"全家便利商店股份有限公司","c":"預購","k":"50068379","p":"1個x1_微醉易開罐造型吊飾"},{"s":"000677","n":"全家便利商店股份有限公司","c":"預購","k":"50068380","p":"1個x1_196易開罐造型吊飾"},{"s":"000677","n":"全家便利商店股份有限公司","c":"預購","k":"50068382","p":"1個x1_預SUPERDRY多功能收納盒"},{"s":"000677","n":"全家便利商店股份有限公司","c":"預購","k":"50068383","p":"1個x1_預)銀色保冰提袋"},{"s":"000677","n":"全家便利商店股份有限公司","c":"預購","k":"50068385","p":"1個x1_預)冰結手提冰壩杯"},{"s":"000677","n":"全家便利商店股份有限公司","c":"預購","k":"50065378","p":"49gx1_預-黑膠杯墊2入組"},{"s":"000677","n":"全家便利商店股份有限公司","c":"預購","k":"50066441","p":"16gx1_預-品牌磁吸小燈箱"},{"s":"000677","n":"全家便利商店股份有限公司","c":"預購","k":"50066589","p":"310gx1_預-健達蛋型陶瓷盤"},{"s":"000669","n":"全家便利商店股份有限公司","c":"預購","k":"50059038","p":"一個_全家貓咪制服"},{"s":"002054","n":"東輝生物科技有限公司","c":"居家/美妝","k":"50066135","p":"1個x1_團-8骨透明直傘-小白款"},{"s":"002054","n":"東輝生物科技有限公司","c":"居家/美妝","k":"50022881","p":"1000ml_團-御衣坊冷壓橘油洗潔精補充包"},{"s":"002054","n":"東輝生物科技有限公司","c":"居家/美妝","k":"50059056","p":"1000ml_團-爽身粉香氛沐浴露補充包"},{"s":"002054","n":"東輝生物科技有限公司","c":"居家/美妝","k":"50061090","p":"80張_團-80抽有蓋純水濕紙巾豹紋款"},{"s":"002055","n":"東輝生物科技有限公司","c":"預購","k":"50064806","p":"1入_珍奶隨行杯850ML-豹紋款"},{"s":"002055","n":"東輝生物科技有限公司","c":"預購","k":"50064807","p":"1入_可愛豹紋地墊-大臉款"},{"s":"002086","n":"寶興行銷管理顧問股份有限公司","c":"預購","k":"50066355","p":"1組_28cm鈦晶不沾雙鍋4件組"},{"s":"003229","n":"澄志行銷有限公司","c":"食品","k":"50055786","p":"240g_團-無糖地瓜"},{"s":"003889","n":"貝宸國際企業有限公司","c":"居家/美妝","k":"50061329","p":"25mlx1_團-PDRN再生水光針面膜"},{"s":"003889","n":"貝宸國際企業有限公司","c":"居家/美妝","k":"50063999","p":"120gx1_團-99%齒垢分解亮白淨齒牙膏"},{"s":"004477","n":"品臻國際行銷有限公司","c":"食品","k":"50068290","p":"160g_團-花生夾心薄餅"},{"s":"025085","n":"富商國際股份有限公司","c":"居家/美妝","k":"50066809","p":"1支_團-冰川藍-超速乾秒收輕羽傘"},{"s":"025085","n":"富商國際股份有限公司","c":"居家/美妝","k":"50066810","p":"1支_團-晨珊粉-超速乾秒收輕羽傘"},{"s":"025085","n":"富商國際股份有限公司","c":"居家/美妝","k":"50059754","p":"(拖把桶x1_團-升級版髒淨分小神拖"},{"s":"114923","n":"龍運行銷股份有限公司","c":"食品","k":"50046297","p":"C2O 100%純椰子水"},{"s":"122054","n":"拌伴餐飲有限公司","c":"預購","k":"50049874","p":"220g(1_芋頭風味布丁"},{"s":"122078","n":"拌伴餐飲有限公司","c":"食品","k":"20209227","p":"團-卡哩卡哩-甜味"},{"s":"122566","n":"拌伴餐飲有限公司","c":"預購","k":"50064052","p":"130公克±_洋芋片雞汁口味"},{"s":"162076","n":"集福客食品開發有限公司","c":"食品","k":"50023843","p":"350mlx_團-今川農場蜂蜜黑木耳露"},{"s":"257042","n":"台灣麒麟啤酒股份有限公司","c":"預購","k":"50065226","p":"1個x1_集)KIRIN高爾夫球"},{"s":"257363","n":"富士鮮味股份有限公司","c":"預購","k":"50027687","p":"700ml*_預-富士山麓威士忌中秋禮盒"},{"s":"634618","n":"偉紘企業社","c":"預購","k":"50067901","p":"五款隨機_名畫盲包壓克力吊飾"},{"s":"642282","n":"天然家園國際股份有限公司","c":"食品","k":"50003369","p":"420gx1_團-東泉辣椒醬"},{"s":"871561","n":"全台物流股份有限公司","c":"國際線/其它","k":"50041514","p":"405gx1_團-Dare海鹽蔬菜脆片"},{"s":"871561","n":"全台物流股份有限公司","c":"國際線/其它","k":"50058725","p":"110gx1_團-維力香菜牛肉風味麵"},{"s":"871561","n":"全台物流股份有限公司","c":"國際線/其它","k":"50065874","p":"700g(2_團-超大奇多隨口脆玉米脆"}];
+
+// ═══════════════════════════════════════════
+// 歷史預載資料
+// ═══════════════════════════════════════════
+const PRELOADED = {"50065379_JA01-057":{"reply":"轉不良","reason":"無中文標","date":"2026-04-08","note":"待檔期結束後一起開退"},"50065400_JD04-011":{"reply":"","reason":"","date":"","note":"待檔期結束後一起開退"},"50065401_JD04-011":{"reply":"","reason":"","date":"","note":"待檔期結束後一起開退"},"50068074_JA01-057":{"reply":"轉不良","reason":"汙點*4+破損*1","date":"2026-05-14","note":"待檔期結束後一起開退"},"50068224_JA01-056":{"reply":"轉不良","reason":"無中文標","date":"2026-05-20","note":"待檔期結束後一起開退"},"50068379_RB01":{"reply":"轉不良","reason":"包裝袋破損*3","date":"2026-05-26","note":"待檔期結束後一起開退"},"50068380_RB01":{"reply":"轉不良","reason":"包裝袋破損*7","date":"2026-05-26","note":"待檔期結束後一起開退"},"50068382_JD03-011":{"reply":"轉不良","reason":"凹損*13+破損*2","date":"2026-05-22","note":"待檔期結束後一起開退"},"50068383_JD03-011":{"reply":"轉不良","reason":"汙損*11","date":"2026-05-22","note":"待檔期結束後一起開退"},"50068385_JD02-011":{"reply":"轉不良","reason":"包裝盒破損*6","date":"2026-05-22","note":"待檔期結束後一起開退"},"50066135_JA01-055":{"reply":"不良退","reason":"包裝袋破損","date":"2026-05-08","note":"","supplierName":"東輝"},"50064806_JA01-045":{"reply":"轉不良","reason":"凹損*1","date":"2026-03-23","note":"待檔期結束後一起開退"},"50055786_RB04":{"reply":"不良換","reason":"","date":"","note":""},"50061329_RB04":{"reply":"不良換","reason":"","date":"","note":""},"50063999_RB04":{"reply":"不良換","reason":"","date":"","note":""},"50068290_RB04":{"reply":"","reason":"","date":"","note":""},"50066809_JA01-055":{"reply":"不良退","reason":"無條碼標*1","date":"2026-05-07","note":"","supplierName":"富商"},"50046297_JA01-022":{"reply":"不良退","reason":"凹損*1","date":"2026-05-22","note":"","supplierName":"龍運"},"50049874_JA01-012":{"reply":"轉不良","reason":"汙損*1","date":"2026-03-19","note":"待檔期結束後一起開退"},"50064052_JA01-011":{"reply":"轉不良","reason":"效期模糊*1","date":"2026-03-24","note":"待檔期結束後一起開退"},"50023843_RB04":{"reply":"","reason":"","date":"","note":""},"50065226_JA01-047":{"reply":"","reason":"","date":"","note":"待檔期結束後一起開退"},"50067901_JA01-055":{"reply":"轉不良","reason":"無中文標","date":"2026-05-06","note":"待檔期結束後一起開退"}};
+
+// ═══════════════════════════════════════════
+// 主檔索引
+// ═══════════════════════════════════════════
+const skuIdx={},supIdx={};
+MASTER.forEach(m=>{
+  if(!skuIdx[m.k])skuIdx[m.k]=[];skuIdx[m.k].push(m);
+  const sc=m.s+'|'+m.c;if(!supIdx[sc])supIdx[sc]=[];supIdx[sc].push(m);
+});
+function lookupSupplier(rec){
+  const sku=rec.sku,sup=rec.sup,cat=(rec.cat||'').replace('居家美妝','居家/美妝');
+  const cands=new Set();
+  (skuIdx[sku]||[]).forEach(m=>cands.add(m));
+  (supIdx[sup+'|'+cat]||[]).forEach(m=>cands.add(m));
+  MASTER.filter(m=>m.s===sup).forEach(m=>cands.add(m));
+  let best=null,bs=0,bf=[];
+  cands.forEach(m=>{
+    let s=0,f=[];
+    if(m.s===sup){s++;f.push('供應商代號');}
+    if(m.c===cat){s++;f.push('大分類');}
+    if(m.k===sku){s++;f.push('商品代號');}
+    if(rec.name&&m.p){
+      const rn=rec.name.replace(/[^\u4e00-\u9fff\w]/g,''),mn=m.p.replace(/[^\u4e00-\u9fff\w]/g,'');
+      const sh=rn.length<mn.length?rn:mn,lo=rn.length<mn.length?mn:rn;
+      if(sh.length>3&&lo.includes(sh.slice(0,Math.min(6,sh.length)))){s++;f.push('品名');}
+    }
+    if(s>bs){bs=s;best=m;bf=f;}
+  });
+  return bs>=2?{name:best.n,score:bs,fields:bf}:null;
+}
+
+// ═══════════════════════════════════════════
+// State & UI helpers
+// ═══════════════════════════════════════════
+let records=[], editIdx=null;
+
+function showLoading(msg){document.getElementById('loading-text').textContent=msg||'處理中...';document.getElementById('loading-overlay').classList.add('show');}
+function hideLoading(){document.getElementById('loading-overlay').classList.remove('show');}
+function showToast(msg,ms){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),ms||2500);}
+function setSyncStatus(type,msg){const el=document.getElementById('sync-status');el.className='sync-status sync-'+type;el.textContent=msg;}
+
+// ═══════════════════════════════════════════
+// JSONP 呼叫
+// ═══════════════════════════════════════════
+function jsonpGet(url){
+  return new Promise((resolve,reject)=>{
+    const cb='_cb'+Date.now();
+    // 清除舊的 script tag
+    const old=document.getElementById('_jsonp_script');if(old)old.remove();
+    const timer=setTimeout(()=>{cleanup();reject(new Error('連線逾時（15秒）— 請確認網路連線與 Apps Script 部署設定'));},JSONP_TIMEOUT);
+    function cleanup(){delete window[cb];const s=document.getElementById('_jsonp_script');if(s)s.remove();}
+    window[cb]=function(data){clearTimeout(timer);cleanup();resolve(data);};
+    const s=document.createElement('script');
+    s.id='_jsonp_script';
+    s.src=url+(url.includes('?')?'&':'?')+'callback='+cb+'&t='+Date.now();
+    s.onerror=()=>{clearTimeout(timer);cleanup();reject(new Error('Script 載入失敗，請確認網路連線'));};
+    document.head.appendChild(s);
+  });
+}
+
+// POST 用 fetch（GAS POST 不需 CORS header 因為是 form-like）
+async function gasPost(payload){
+  // 用 no-cors 送出 POST（GAS 不支援 CORS，無法讀回傳值）
+  await fetch(GAS_URL, {
+    method:'POST',
+    mode:'no-cors',
+    headers:{'Content-Type':'text/plain'},
+    body: JSON.stringify(payload)
+  });
+  // no-cors 無法讀 response，等一秒後用 JSONP GET 確認資料有寫進去
+  await new Promise(r=>setTimeout(r,1200));
+  return {status:'ok'};
+}
+
+// ═══════════════════════════════════════════
+// 讀取資料
+// ═══════════════════════════════════════════
+async function loadData(){
+  setSyncStatus('loading','⏳ 讀取中...');
+  document.getElementById('btn-refresh').disabled=true;
+  showLoading('從 Google Sheets 讀取資料...');
+  try{
+    const data = await jsonpGet(GAS_URL);
+    if(data.status==='ok'){
+      if(data.records&&data.records.length>0){
+        records=data.records.map(r=>({
+          ...r,
+          qty:isNaN(Number(r.qty))?0:Number(r.qty),
+          sn:isNaN(Number(r.sn))?0:Number(r.sn),
+          matchScore:isNaN(Number(r.matchScore))?0:Number(r.matchScore),
+          matchFields:r.matchFields?String(r.matchFields).split(',').filter(Boolean):[],
+          preloaded:r.preloaded==='true'||r.preloaded===true,
+          date:formatDate(r.date),
+          updatedAt:formatDate(r.updatedAt),
+          returnDate:formatDate(r.returnDate),
+          key:String(r.sku||'').trim()+'_'+String(r.loc||'').trim()
+        }));
+        document.getElementById('empty-state').style.display='none';
+        document.getElementById('main-table').style.display='';
+      } else {
+        document.getElementById('empty-state').querySelector('.empty-icon').textContent='📦';
+        document.getElementById('empty-state').querySelector('h3').textContent='尚未匯入資料';
+        document.getElementById('empty-state').querySelector('p').textContent='請點擊右上角「匯入 Excel」上傳每日不良品報表';
+      }
+      renderTable(); updateStats();
+      setSyncStatus('ok','✓ 已連線');
+      showToast('✓ 已從 Google Sheets 載入 '+records.length+' 筆資料');
+      setTimeout(showReturnDateNotif, 800);
+    } else { throw new Error(data.msg||'回傳錯誤'); }
+  } catch(err){
+    setSyncStatus('err','✗ 連線失敗');
+    document.getElementById('empty-state').querySelector('.empty-icon').textContent='⚠️';
+    document.getElementById('empty-state').querySelector('h3').textContent='Google Sheets 連線失敗';
+    document.getElementById('empty-state').querySelector('p').innerHTML=
+      '錯誤原因：<strong>'+err.message+'</strong><br><br>'+
+      '請確認以下事項：<br>'+
+      '① Apps Script 已重新部署（建立新版本）<br>'+
+      '② 部署設定「存取權」設為「所有人」<br>'+
+      '③ 執行身分設為「我（你的帳號）」<br><br>'+
+      '<button onclick="loadData()" style="padding:8px 16px;background:#1a1917;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:12px">重新連線</button>';
+    showToast('⚠️ 連線失敗：'+err.message, 6000);
+  }
+  hideLoading();
+  document.getElementById('btn-refresh').disabled=false;
+}
+
+// ═══════════════════════════════════════════
+// 儲存資料
+// ═══════════════════════════════════════════
+async function saveData(){
+  setSyncStatus('loading','⏳ 儲存中...');
+  try{
+    const payload={action:'save',records:records.map(r=>({...r,matchFields:(r.matchFields||[]).join(','),updatedAt:r.updatedAt||'',returnDate:r.returnDate||''}))};
+    await gasPost(payload);
+    setSyncStatus('ok','✓ 已同步');
+    showToast('✓ 已儲存到 Google Sheets');
+  } catch(err){
+    setSyncStatus('err','✗ 儲存失敗');
+    showToast('⚠ 儲存失敗：'+err.message, 5000);
+  }
+}
+
+// ═══════════════════════════════════════════
+// 匯入 Excel
+// ═══════════════════════════════════════════
+function handleFile(input){
+  const file=input.files[0];if(!file)return;
+  showLoading('讀取 Excel 中...');
+  const reader=new FileReader();
+  reader.onload=async e=>{
+    try{
+      const wb=XLSX.read(e.target.result,{type:'array',cellDates:true});
+      const sheetName=wb.SheetNames.find(n=>n==='明細表')||wb.SheetNames[1];
+      if(!sheetName){hideLoading();alert('找不到「明細表」分頁');return;}
+      const ws=wb.Sheets[sheetName];
+      const raw=XLSX.utils.sheet_to_json(ws,{header:1,defval:''});
+      if(raw.length<2){hideLoading();alert('明細表無資料');return;}
+      const hdr=raw[0].map(h=>String(h).trim());
+      const ci={sn:hdr.indexOf('項次'),sup:hdr.indexOf('供應商代號'),loc:hdr.indexOf('儲位'),cat:hdr.indexOf('大分類'),sku:hdr.indexOf('商品代號'),name:hdr.indexOf('品名'),qty:hdr.indexOf('庫存數量')};
+      const newMap={};
+      for(let i=1;i<raw.length;i++){
+        const row=raw[i];
+        const sku=String(row[ci.sku]||'').trim(),loc=String(row[ci.loc]||'').trim();
+        const key=sku+'_'+loc;if(!key||key==='_')continue;
+        const rec={sn:row[ci.sn]||i,sup:String(row[ci.sup]||'').trim(),loc,cat:String(row[ci.cat]||'').trim(),sku,name:String(row[ci.name]||'').trim(),qty:row[ci.qty]!==''?Number(row[ci.qty]):0,reply:'',reason:'',date:'',returnDate:'',note:'',handler:'',updatedAt:'',supplierName:'',matchScore:0,matchFields:[],preloaded:false};
+        if(PRELOADED[key]){const p=PRELOADED[key];rec.reply=p.reply||'';rec.reason=p.reason||'';rec.date=p.date||'';rec.note=p.note||'';if(p.supplierName)rec.supplierName=p.supplierName;rec.preloaded=true;}
+        const match=lookupSupplier(rec);
+        if(match){rec.supplierName=match.name;rec.matchScore=match.score;rec.matchFields=match.fields;}
+        newMap[key]=rec;
+      }
+      // 建立現有資料索引（以 sku_loc 為 key，去除重複，保留最新）
+      const existMap={};
+      records.forEach(r=>{
+        const k=String(r.sku||'').trim()+'_'+String(r.loc||'').trim();
+        if(k&&k!=='_') existMap[k]=r;
+      });
+      const merged=[];
+      Object.entries(newMap).forEach(([key,nd])=>{
+        if(existMap[key]){const old=existMap[key];merged.push({...old,qty:nd.qty,sn:nd.sn,name:nd.name,supplierName:nd.supplierName||old.supplierName,matchScore:nd.matchScore,matchFields:nd.matchFields});}
+        else merged.push(nd);
+      });
+      // 去重：同樣 sku_loc 只保留一筆
+      const deduped={};
+      merged.forEach(r=>{
+        const k=String(r.sku||'').trim()+'_'+String(r.loc||'').trim();
+        if(!deduped[k]) deduped[k]=r;
+      });
+      const deduped_arr=Object.values(deduped);
+      deduped_arr.sort((a,b)=>Number(a.sn)-Number(b.sn));
+      records=deduped_arr;
+      document.getElementById('empty-state').style.display='none';
+      document.getElementById('main-table').style.display='';
+      renderTable(); updateStats();
+      notifShown=false; setTimeout(showReturnDateNotif, 600);
+      hideLoading();
+      await saveData();
+    }catch(err){hideLoading();alert('讀取失敗：'+err.message);}
+    input.value='';
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+// ═══════════════════════════════════════════
+// Render
+// ═══════════════════════════════════════════
+function formatDate(val){
+  if(!val||val==='')return '';
+  const s=String(val).trim();
+  if(/^\d{4}-\d{2}-\d{2}$/.test(s))return s;
+  const d=new Date(s);
+  if(isNaN(d.getTime()))return '';
+  const y=d.getFullYear();
+  const mo=String(d.getMonth()+1).padStart(2,'0');
+  const dd=String(d.getDate()).padStart(2,'0');
+  return y+'-'+mo+'-'+dd;
+}
+function formatDate(val){
+  if(!val||val==='')return '';
+  const s=String(val).trim();
+  if(s.match(/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/))return s;
+  const d=new Date(s);
+  if(isNaN(d.getTime()))return '';
+  const y=d.getFullYear();
+  const mo=String(d.getMonth()+1).padStart(2,'0');
+  const dd=String(d.getDate()).padStart(2,'0');
+  return y+'-'+mo+'-'+dd;
+}
+function todayStr(){
+  const d=new Date();
+  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+}
+function daysSince(ds){if(!ds)return null;const d=new Date(ds);if(isNaN(d))return null;return Math.floor((new Date()-d)/86400000);}
+function daysUntil(ds){if(!ds)return null;const d=new Date(ds);if(isNaN(d))return null;return Math.ceil((d-new Date())/86400000);}
+function overdueLevel(r){
+  const d=daysSince(r.date);
+  if(d===null)return 0;
+  if(d>14)return 2; // 紅色
+  if(d>7)return 1;  // 橘色
+  return 0;
+}
+function isOverdue(r){return overdueLevel(r)>0;}
+function replyBadge(v){
+  if(!v)return '<span class="badge badge-empty">未填</span>';
+  if(v==='轉不良')return '<span class="badge badge-blue">轉不良</span>';
+  if(v==='不良退')return '<span class="badge badge-coral">不良退</span>';
+  if(v==='不良換')return '<span class="badge badge-teal">不良換</span>';
+  return '<span class="badge badge-gray">'+v+'</span>';
+}
+function renderTable(){
+  const q=document.getElementById('search').value.toLowerCase();
+  const fR=document.getElementById('filter-reply').value;
+  const fC=document.getElementById('filter-cat').value;
+  const fO=document.getElementById('filter-overdue').value;
+  const fSup=document.getElementById('filter-sup')?document.getElementById('filter-sup').value:'';
+  const rows=records.filter(r=>{
+    if(q&&!([r.sup,r.name,r.sku,r.loc,r.supplierName||''].join(' ').toLowerCase().includes(q)))return false;
+    if(fR==='__empty'&&r.reply)return false;
+    if(fR&&fR!=='__empty'&&r.reply!==fR)return false;
+    if(fC&&r.cat!==fC)return false;
+    if(fO==='1'&&!isOverdue(r))return false;
+    if(fSup&&r.sup!==fSup)return false;
+    return true;
+  });
+  document.getElementById('row-count').textContent='顯示 '+rows.length+' / '+records.length+' 筆';
+  document.getElementById('tbody').innerHTML=rows.map(r=>{
+    const ri=records.indexOf(r);
+    const odLv=overdueLevel(r),days=daysSince(r.date);
+    const odClass=odLv===2?'overdue-crit':odLv===1?'overdue-warn':'';
+    const odPill=odLv===2?`<span class="overdue-crit-pill">🔴 逾${days}天</span>`:odLv===1?`<span class="overdue-warn-pill">🟡 逾${days}天</span>`:'';
+    const dateHtml=r.date?(r.date+odPill):'—';
+    // 廠商收退日顯示邏輯
+    let returnDateHtml='—';
+    if(r.returnDate){
+      const daysTo=daysUntil(r.returnDate);
+      let pill='';
+      if(daysTo<0) pill=`<span class="return-date-over">已過期</span>`;
+      else if(daysTo===0) pill=`<span class="return-date-today">📦 今日收退</span>`;
+      else if(daysTo<=2) pill=`<span class="return-date-soon">D-${daysTo}</span>`;
+      returnDateHtml=r.returnDate+pill;
+    }
+    const snHtml=r.supplierName?r.supplierName+(r.matchScore?'<span class="match-tag">✓'+r.matchScore+'項</span>':''):'<span style="color:var(--text3)">—</span>';
+    return `<tr class="${odClass}" data-idx="${ri}" onclick="handleRowClick(event,${ri})" style="cursor:pointer">
+      <td class="td-check"><input type="checkbox" class="row-check" data-idx="${ri}" onchange="onRowCheck(this)"></td>
+      <td class="row-num">${r.sn}</td>
+      <td class="mono">${r.sup}</td>
+      <td style="font-size:12px">${snHtml}</td>
+      <td class="mono">${r.loc}</td>
+      <td>${r.cat?'<span class="badge badge-gray">'+r.cat+'</span>':''}</td>
+      <td class="mono">${r.sku}</td>
+      <td class="cell-clip" style="max-width:200px" title="${r.name}">${r.name}</td>
+      <td style="text-align:right;font-weight:600;${r.qty<0?'color:var(--coral-text)':''}">${r.qty}</td>
+      <td>${replyBadge(r.reply)}</td>
+      <td class="cell-clip" style="max-width:110px;color:var(--text2)" title="${r.reason||''}">${r.reason||'—'}</td>
+      <td style="white-space:nowrap;font-size:12px">${dateHtml}</td>
+      <td style="white-space:nowrap;font-size:12px">${returnDateHtml}</td>
+      <td class="cell-clip" style="max-width:130px;color:var(--text2)" title="${r.note||''}">${r.note||'—'}</td>
+      <td style="font-size:12px">${r.handler||'—'}</td>
+      <td style="font-size:11px;color:var(--text3)">${r.updatedAt||'—'}</td>
+      <td style="position:sticky;right:0;background:var(--surface);box-shadow:-2px 0 4px rgba(0,0,0,.06)"><button class="btn btn-sm" onclick="openEdit(${ri})">編輯</button></td>
+    </tr>`;
+  }).join('');
+}
+function updateStats(){
+  document.getElementById('st-total').textContent=records.length;
+  document.getElementById('st-pending').textContent=records.filter(r=>!r.reply).length;
+  document.getElementById('st-overdue').textContent=records.filter(r=>isOverdue(r)).length;
+  document.getElementById('st-trans').textContent=records.filter(r=>r.reply==='轉不良').length;
+  document.getElementById('st-ret').textContent=records.filter(r=>r.reply==='不良退').length;
+  document.getElementById('st-swap').textContent=records.filter(r=>r.reply==='不良換').length;
+  document.getElementById('st-matched').textContent=records.filter(r=>r.supplierName).length;
+  // 更新 sidebar 數字
+  const sMap={'all':records.length,'pending':records.filter(r=>!r.reply).length,'overdue':records.filter(r=>isOverdue(r)).length,'trans':records.filter(r=>r.reply==='轉不良').length,'ret':records.filter(r=>r.reply==='不良退').length,'swap':records.filter(r=>r.reply==='不良換').length,'matched':records.filter(r=>r.supplierName).length};
+  Object.entries(sMap).forEach(([k,v])=>{const el=document.getElementById('sb-val-'+k);if(el)el.textContent=v;});
+  // 更新供應商篩選下拉選單
+  updateSupFilter();
+}
+
+function updateSupFilter(){
+  const sel = document.getElementById('filter-sup');
+  if(!sel) return;
+  const current = sel.value;
+  // 取得所有不重複供應商，依代號排序
+  const supMap = {};
+  records.forEach(r=>{
+    if(r.sup) supMap[r.sup] = r.supplierName || r.sup;
+  });
+  const sups = Object.entries(supMap).sort((a,b)=>a[0].localeCompare(b[0]));
+  sel.innerHTML = '<option value="">🏢 全部供應商</option>';
+  sups.forEach(([code, name])=>{
+    const opt = document.createElement('option');
+    opt.value = code;
+    opt.textContent = name !== code ? code+' '+name : code;
+    if(code === current) opt.selected = true;
+    sel.appendChild(opt);
+  });
+}
+
+// ── 逾期通知 ──
+let notifShown = false;
+function showReturnDateNotif(){
+  // 收退日 D-2, D-1, D 的品項
+  const items = records.filter(r=>{
+    if(!r.returnDate) return false;
+    const d=daysUntil(r.returnDate);
+    return d!==null && d>=0 && d<=2;
+  }).sort((a,b)=>daysUntil(a.returnDate)-daysUntil(b.returnDate));
+  if(!items.length){
+    // 沒有收退提醒，直接跳逾期
+    showOverdueNotif();
+    return;
+  }
+  // 建立收退提醒視窗
+  const body = document.getElementById('notif-body');
+  document.getElementById('notif-title').textContent = '🚚 廠商收退提醒';
+  let html = `<div style="font-size:11px;font-weight:700;color:#5b21b6;margin-bottom:12px;letter-spacing:.3px">以下品項廠商即將收退，請盡速處理！</div>`;
+  items.forEach(r=>{
+    const d=daysUntil(r.returnDate);
+    const label=d===0?'📦 今日收退':`D-${d}`;
+    const cls=d===0?'return-date-today':'return-date-soon';
+    const bg=d===0?'#fef3c7':'#f5f3ff';
+    const bc=d===0?'#fde68a':'#c4b5fd';
+    html += `<div class="notif-item" style="background:${bg};border-color:${bc};">
+      <div style="font-size:22px">🚚</div>
+      <div class="notif-item-info">
+        <div class="notif-item-name">${r.name}</div>
+        <div class="notif-item-meta">供應商：${r.sup}　儲位：${r.loc}　收退日：<strong style="color:#5b21b6">${r.returnDate}</strong></div>
+      </div>
+      <span class="${cls}">${label}</span>
+    </div>`;
+  });
+  body.innerHTML = html;
+  // 關閉按鈕改為關閉後跳逾期
+  document.getElementById('notif-close-btn').onclick = ()=>{ closeReturnNotif(); };
+  document.getElementById('notif-overlay').classList.add('open');
+}
+
+function closeReturnNotif(){
+  document.getElementById('notif-overlay').classList.remove('open');
+  // 關閉收退視窗後跳逾期視窗
+  setTimeout(showOverdueNotif, 300);
+}
+function showOverdueNotif(){
+  if(notifShown) return;
+  // 逾期且「沒有」進度備註的才提醒
+  const items = records.filter(r=>overdueLevel(r)>0 && !r.note).sort((a,b)=>daysSince(b.date)-daysSince(a.date));
+  if(!items.length) return;
+  notifShown = true;
+  const body = document.getElementById('notif-body');
+  document.getElementById('notif-title').textContent = '🚨 逾期品項通知';
+  const crit = items.filter(r=>overdueLevel(r)===2);
+  const warn = items.filter(r=>overdueLevel(r)===1);
+  let html = '';
+  if(crit.length){
+    html += `<div style="font-size:11px;font-weight:700;color:var(--red);margin-bottom:8px;letter-spacing:.3px">🔴 嚴重逾期（超過14天）— ${crit.length} 筆</div>`;
+    crit.forEach(r=>{
+      const d=daysSince(r.date);
+      html += `<div class="notif-item crit">
+        <div style="font-size:20px">🚨</div>
+        <div class="notif-item-info">
+          <div class="notif-item-name">${r.name}</div>
+          <div class="notif-item-meta">供應商：${r.sup}　儲位：${r.loc}　<strong style="color:var(--red)">逾期 ${d} 天</strong></div>
+        </div>
+        <span class="overdue-crit-pill">逾${d}天</span>
+      </div>`;
+    });
+  }
+  if(warn.length){
+    if(crit.length) html += '<div style="height:12px"></div>';
+    html += `<div style="font-size:11px;font-weight:700;color:var(--amber);margin-bottom:8px;letter-spacing:.3px">🟡 逾期警示（7–14天）— ${warn.length} 筆</div>`;
+    warn.forEach(r=>{
+      const d=daysSince(r.date);
+      html += `<div class="notif-item warn">
+        <div style="font-size:20px">⚠️</div>
+        <div class="notif-item-info">
+          <div class="notif-item-name">${r.name}</div>
+          <div class="notif-item-meta">供應商：${r.sup}　儲位：${r.loc}　<strong style="color:var(--amber)">逾期 ${d} 天</strong></div>
+        </div>
+        <span class="overdue-warn-pill">逾${d}天</span>
+      </div>`;
+    });
+  }
+  body.innerHTML = html;
+  document.getElementById('notif-close-btn').onclick = ()=>closeNotif();
+  document.getElementById('notif-overlay').classList.add('open');
+}
+function closeNotif(){ document.getElementById('notif-overlay').classList.remove('open'); }
+
+// ── 統計卡片篩選 ──
+let activeCard = 'all';
+let currentView = 'dashboard'; // 'dashboard' | 'table'
+
+function toggleSidebar(){
+  const sb = document.getElementById('sidebar');
+  sb.classList.toggle('collapsed');
+}
+function showDashboard(){
+  currentView = 'dashboard';
+  document.getElementById('dashboard-view').style.display = '';
+  document.getElementById('table-view').style.display = 'none';
+  document.getElementById('sidebar').style.display = 'none';
+  // 移除所有 active
+  document.querySelectorAll('.stat-card').forEach(el=>el.classList.remove('active'));
+  activeCard = 'all';
+}
+
+function showTable(key){
+  currentView = 'table';
+  document.getElementById('dashboard-view').style.display = 'none';
+  document.getElementById('table-view').style.display = 'flex';
+  const sb = document.getElementById('sidebar');
+  sb.style.display = 'flex';
+  // 預設收合，需要時再展開
+  if(!sb.classList.contains('collapsed')) sb.classList.add('collapsed');
+  filterByCard(key);
+}
+
+function filterByCard(key){
+  activeCard = key;
+  // 更新卡片 active 狀態
+  activeCard = key;
+  // 更新 sidebar active
+  document.querySelectorAll('.sidebar-item').forEach(el=>el.classList.remove('active'));
+  const sEl = document.getElementById('sidebar-'+key);
+  if(sEl) sEl.classList.add('active');
+  // 更新 dashboard card active（若還在儀表板）
+  document.querySelectorAll('.stat-card').forEach(el=>el.classList.remove('active'));
+  const cEl = document.getElementById('card-'+key);
+  if(cEl) cEl.classList.add('active');
+  // 同步篩選
+  const replyEl = document.getElementById('filter-reply');
+  const overdueEl = document.getElementById('filter-overdue');
+  replyEl.value = '';
+  overdueEl.value = '';
+  if(key==='pending') replyEl.value='__empty';
+  else if(key==='overdue') overdueEl.value='1';
+  else if(key==='trans') replyEl.value='轉不良';
+  else if(key==='ret') replyEl.value='不良退';
+  else if(key==='swap') replyEl.value='不良換';
+  renderTable();
+}
+
+// ── 批次選取 ──
+let selectedIdx = new Set();
+function onRowCheck(cb){
+  const idx = parseInt(cb.dataset.idx);
+  if(cb.checked) selectedIdx.add(idx);
+  else selectedIdx.delete(idx);
+  updateBatchBar();
+}
+function toggleCheckAll(cb){
+  document.querySelectorAll('.row-check').forEach(el=>{
+    el.checked = cb.checked;
+    const idx = parseInt(el.dataset.idx);
+    if(cb.checked) selectedIdx.add(idx);
+    else selectedIdx.delete(idx);
+  });
+  updateBatchBar();
+}
+function updateBatchBar(){
+  const bar = document.getElementById('batch-bar');
+  const label = document.getElementById('batch-count-label');
+  if(selectedIdx.size>0){
+    bar.classList.add('show');
+    label.textContent = '已選 '+selectedIdx.size+' 筆';
+  } else {
+    bar.classList.remove('show');
+  }
+}
+function clearSelection(){
+  selectedIdx.clear();
+  document.querySelectorAll('.row-check').forEach(el=>el.checked=false);
+  const ca = document.getElementById('check-all');
+  if(ca) ca.checked=false;
+  updateBatchBar();
+}
+
+// ── 批次編輯 Modal ──
+function openBatchModal(){
+  if(!selectedIdx.size) return;
+  document.getElementById('batch-modal-count').textContent=selectedIdx.size;
+  document.getElementById('b-reply').value='';
+  document.getElementById('b-date').value='';
+  document.getElementById('b-reason').value='';
+  document.getElementById('b-note').value='';
+  document.getElementById('b-handler').value='';
+  document.getElementById('batch-modal-overlay').classList.add('open');
+}
+function closeBatchModal(){ document.getElementById('batch-modal-overlay').classList.remove('open'); }
+async function applyBatch(){
+  const reply=document.getElementById('b-reply').value;
+  const date=document.getElementById('b-date').value;
+  const returnDate=document.getElementById('b-returnDate').value;
+  const reason=document.getElementById('b-reason').value;
+  const note=document.getElementById('b-note').value;
+  const handler=document.getElementById('b-handler').value;
+  selectedIdx.forEach(idx=>{
+    const r=records[idx];
+    if(reply) r.reply=reply;
+    if(date) r.date=date;
+    if(returnDate) r.returnDate=returnDate;
+    if(reason) r.reason=reason;
+    if(note) r.note=note;
+    if(handler) r.handler=handler;
+    r.updatedAt=todayStr();
+  });
+  closeBatchModal();
+  clearSelection();
+  renderTable(); updateStats();
+  await saveData();
+  showToast('✓ 已批次更新 '+selectedIdx.size+' 筆資料並同步');
+}
+
+// ═══════════════════════════════════════════
+// Modal
+// ═══════════════════════════════════════════
+function openEdit(idx){
+  editIdx=idx;const r=records[idx];
+  document.getElementById('m-name').textContent=r.name;
+  document.getElementById('m-meta').innerHTML='<span>供應商：'+r.sup+'</span><span>儲位：'+r.loc+'</span><span>SKU：'+r.sku+'</span><span>庫存：'+r.qty+'</span>';
+  const sb=document.getElementById('m-supplier-box');
+  if(r.supplierName){sb.style.display='flex';document.getElementById('m-supplier-name').textContent=r.supplierName;document.getElementById('m-match-info').textContent=r.matchScore?'(符合'+r.matchScore+'項：'+(r.matchFields||[]).join('、')+')':'(預載)';}
+  else{sb.style.display='none';}
+  document.getElementById('m-supplierName').value=r.supplierName||'';
+  document.getElementById('preload-notice').style.display=r.preloaded?'flex':'none';
+  document.getElementById('m-reply').value=r.reply||'';
+  document.getElementById('m-reason').value=r.reason||'';
+  document.getElementById('m-date').value=r.date||'';
+  document.getElementById('m-returnDate').value=r.returnDate||'';
+  document.getElementById('m-note').value=r.note||'';
+  document.getElementById('m-handler').value=r.handler||'';
+  document.getElementById('edit-modal').classList.add('open');
+}
+function closeModal(){document.getElementById('edit-modal').classList.remove('open');editIdx=null;}
+async function saveEdit(){
+  if(editIdx===null)return;
+  const r=records[editIdx];
+  r.reply=document.getElementById('m-reply').value;
+  r.reason=document.getElementById('m-reason').value;
+  r.date=document.getElementById('m-date').value;
+  r.returnDate=document.getElementById('m-returnDate').value;
+  r.note=document.getElementById('m-note').value;
+  r.handler=document.getElementById('m-handler').value;
+  r.supplierName=document.getElementById('m-supplierName').value||r.supplierName||'';
+  r.updatedAt=todayStr();
+  closeModal(); renderTable(); updateStats();
+  await saveData();
+}
+document.getElementById('edit-modal').addEventListener('click',e=>{if(e.target===document.getElementById('edit-modal'))closeModal();});
+
+// ═══════════════════════════════════════════
+// 匯出
+// ═══════════════════════════════════════════
+function exportData(){
+  if(!records.length){ showToast('⚠ 尚無資料可匯出'); return; }
+
+  // 取得目前篩選後的資料（若有篩選就只匯出篩選結果）
+  const q = document.getElementById('search').value.toLowerCase();
+  const fR = document.getElementById('filter-reply').value;
+  const fC = document.getElementById('filter-cat').value;
+  const fO = document.getElementById('filter-overdue').value;
+  const fSup2 = document.getElementById('filter-sup')?document.getElementById('filter-sup').value:'';
+  const filtered = records.filter(r=>{
+    if(q&&!([r.sup,r.name,r.sku,r.loc,r.supplierName||''].join(' ').toLowerCase().includes(q)))return false;
+    if(fR==='__empty'&&r.reply)return false;
+    if(fR&&fR!=='__empty'&&r.reply!==fR)return false;
+    if(fC&&r.cat!==fC)return false;
+    if(fO==='1'&&!isOverdue(r))return false;
+    if(fSup2&&r.sup!==fSup2)return false;
+    return true;
+  });
+
+  const today = new Date().toISOString().slice(0,10);
+  const user = currentUser ? currentUser.name : '';
+
+  // ── 主資料工作表 ──
+  const mainRows = filtered.map((r,i)=>({
+    '項次': r.sn,
+    '供應商代號': r.sup,
+    '供應商名稱': r.supplierName||'',
+    '儲位': r.loc,
+    '大分類': r.cat,
+    '商品代號': r.sku,
+    '品名': r.name,
+    '庫存數量': r.qty,
+    '商流回覆': r.reply||'未填',
+    '不良原因': r.reason||'',
+    '反映日期': r.date||'',
+    '廠商收退日': r.returnDate||'',
+    '逾期天數': r.date ? (daysSince(r.date) > 0 ? daysSince(r.date)+'天' : '') : '',
+    '進度備註': r.note||'',
+    '處理人員': r.handler||'',
+    '更新日期': r.updatedAt||'',
+  }));
+
+  const ws = XLSX.utils.json_to_sheet(mainRows);
+
+  // ── 欄位寬度設定 ──
+  ws['!cols'] = [
+    {wch:6},{wch:12},{wch:20},{wch:10},{wch:10},{wch:12},{wch:35},
+    {wch:8},{wch:10},{wch:18},{wch:12},{wch:12},{wch:10},{wch:25},{wch:10},{wch:12}
+  ];
+
+  // ── 標題列樣式（粗體底色）──
+  const range = XLSX.utils.decode_range(ws['!ref']);
+  for(let C=range.s.c; C<=range.e.c; C++){
+    const cell = ws[XLSX.utils.encode_cell({r:0,c:C})];
+    if(cell){
+      cell.s = {
+        font:{bold:true, color:{rgb:'FFFFFF'}},
+        fill:{fgColor:{rgb:'1A1917'}},
+        alignment:{horizontal:'center',vertical:'center'},
+        border:{bottom:{style:'medium',color:{rgb:'D94F2B'}}}
+      };
+    }
+  }
+
+  // ── 逾期列標紅 ──
+  for(let R=1; R<=range.e.r; R++){
+    const r = filtered[R-1];
+    if(!r) continue;
+    const lv = overdueLevel(r);
+    if(lv > 0){
+      const color = lv===2 ? 'FEE2E2' : 'FEF3C7';
+      for(let C=range.s.c; C<=range.e.c; C++){
+        const addr = XLSX.utils.encode_cell({r:R,c:C});
+        if(!ws[addr]) ws[addr]={t:'s',v:''};
+        ws[addr].s = { fill:{fgColor:{rgb:color}} };
+      }
+    }
+  }
+
+  // ── 統計摘要工作表 ──
+  const total = filtered.length;
+  const pending = filtered.filter(r=>!r.reply).length;
+  const overdue = filtered.filter(r=>isOverdue(r)).length;
+  const trans = filtered.filter(r=>r.reply==='轉不良').length;
+  const ret = filtered.filter(r=>r.reply==='不良退').length;
+  const swap = filtered.filter(r=>r.reply==='不良換').length;
+  const summaryRows = [
+    {'項目':'匯出日期','數值':today},
+    {'項目':'匯出帳號','數值':user},
+    {'項目':'匯出筆數','數值':total},
+    {'項目':'','數值':''},
+    {'項目':'待處理（未填商流）','數值':pending},
+    {'項目':'逾期警示（>7天）','數值':overdue},
+    {'項目':'','數值':''},
+    {'項目':'轉不良','數值':trans},
+    {'項目':'不良退','數值':ret},
+    {'項目':'不良換','數值':swap},
+  ];
+  const wsSummary = XLSX.utils.json_to_sheet(summaryRows);
+  wsSummary['!cols'] = [{wch:22},{wch:15}];
+
+  // ── 組合 Workbook ──
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, '不良品明細');
+  XLSX.utils.book_append_sheet(wb, wsSummary, '統計摘要');
+
+  const buf = XLSX.write(wb,{bookType:'xlsx',type:'array',cellStyles:true});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([buf],{type:'application/octet-stream'}));
+  const suffix = fR||fC ? '_篩選' : '';
+  a.download = '廠退追蹤'+suffix+'_'+today+'.xlsx';
+  a.click();
+  showToast('✓ 已匯出 '+filtered.length+' 筆資料');
+}
+
+// ═══════════════════════════════════════════
+// 啟動
+// ═══════════════════════════════════════════
+
+// ═══════════════════════════════════════════
+// 帳號設定
+// ═══════════════════════════════════════════
+const ACCOUNTS = {
+  'KAOLOG': { password: '8963',     name: '岡山倉',  role: 'user',  color: '#10b981' },
+  'DADU01': { password: '1234',     name: '大肚倉',  role: 'user',  color: '#3b82f6' },
+  'DAXI01': { password: '0000',     name: '大溪倉',  role: 'user',  color: '#8b5cf6' },
+  'NJWU09': { password: 'Aa123456', name: '管理員',  role: 'admin', color: '#f59e0b' },
+};
+
+let currentUser = null;
+
+function doLogin(){
+  const user = document.getElementById('login-user').value.trim().toUpperCase();
+  const pass = document.getElementById('login-pass').value;
+  const errEl = document.getElementById('login-error');
+
+  if(!user || !pass){ errEl.textContent = '請輸入帳號與密碼'; return; }
+
+  const account = ACCOUNTS[user];
+  if(!account || account.password !== pass){
+    errEl.textContent = '帳號或密碼錯誤，請重新輸入';
+    document.getElementById('login-pass').value = '';
+    document.getElementById('login-pass').focus();
+    return;
+  }
+
+  // 登入成功
+  currentUser = { id: user, ...account };
+  errEl.textContent = '';
+  document.getElementById('login-screen').classList.add('hidden');
+
+  // 顯示使用者資訊
+  const badge = document.getElementById('user-badge');
+  const dot = document.getElementById('user-dot');
+  const disp = document.getElementById('user-display');
+  badge.style.display = 'flex';
+  dot.style.background = account.color;
+  if(account.role === 'admin') dot.classList.add('admin');
+  disp.textContent = account.name;
+
+  // Admin 顯示提示banner
+  if(account.role === 'admin'){
+    const banner = document.createElement('div');
+    banner.className = 'admin-banner';
+    banner.id = 'admin-banner';
+    banner.innerHTML = '👑 管理員模式：可檢視與編輯所有資料';
+    document.querySelector('.main').insertAdjacentElement('beforebegin', banner);
+  }
+
+  // 載入資料
+  loadData();
+}
+
+function doLogout(){
+  if(!confirm('確定要登出嗎？')) return;
+  currentUser = null;
+  // 重設畫面
+  document.getElementById('login-screen').classList.remove('hidden');
+  document.getElementById('user-badge').style.display = 'none';
+  document.getElementById('login-user').value = '';
+  document.getElementById('login-pass').value = '';
+  document.getElementById('login-error').textContent = '';
+  const banner = document.getElementById('admin-banner');
+  if(banner) banner.remove();
+  // 重設資料與視圖
+  records = [];
+  showDashboard();
+  updateStats();
+  document.getElementById('main-table').style.display = 'none';
+  document.getElementById('empty-state').style.display = '';
+  setSyncStatus('loading', '⏳ 連線中...');
+}
+
+// ── 點列直接開啟編輯 ──
+function handleRowClick(event, idx){
+  // 如果點到 checkbox 或編輯按鈕就不觸發
+  if(event.target.type === 'checkbox') return;
+  if(event.target.tagName === 'BUTTON') return;
+  if(event.target.closest('button')) return;
+  openEdit(idx);
+}
+
+
+// 不自動載入，等登入後再載入
+// loadData();
+
+
+</script>
+</body>
+</html>
